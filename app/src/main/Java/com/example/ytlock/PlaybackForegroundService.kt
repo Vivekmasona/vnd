@@ -27,23 +27,30 @@ class PlaybackForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        setupMediaSession()
-        acquireWakeLock()
+        try {
+            createNotificationChannel()
+            setupMediaSession()
+            acquireWakeLock()
+        } catch (_: Exception) {
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            val notification = buildNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            mediaSession?.isActive = true
+        } catch (_: Exception) {
+            stopSelf()
         }
-        mediaSession?.isActive = true
         return START_STICKY
     }
 
@@ -62,10 +69,6 @@ class PlaybackForegroundService : Service() {
             setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     mediaSession?.isActive = true
-                }
-
-                override fun onPause() {
-                    // Optional: hook into UI/WebView if needed
                 }
             })
             isActive = true
@@ -118,14 +121,16 @@ class PlaybackForegroundService : Service() {
     }
 
     override fun onDestroy() {
-        mediaSession?.isActive = false
-        mediaSession?.release()
-        wakeLock?.let {
-            if (it.isHeld) it.release()
+        try {
+            mediaSession?.isActive = false
+            mediaSession?.release()
+            wakeLock?.let {
+                if (it.isHeld) it.release()
+            }
+        } catch (_: Exception) {
         }
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 }
-
